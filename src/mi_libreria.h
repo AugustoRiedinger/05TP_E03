@@ -117,6 +117,6 @@ void INIT_EXTINT(GPIO_TypeDef*, uint16_t);
 void INIT_DAC_CONT(GPIO_TypeDef* , uint16_t);
 void DAC_CONT(GPIO_TypeDef*, uint16_t, int16_t);
 void INIT_DAC_SINE(GPIO_TypeDef*, uint16_t);
-static void DAC_SINE32BIT(GPIO_TypeDef*, uint16_t, const uint16_t * ,uint32_t );
+void DAC_SINE32BIT(GPIO_TypeDef*, uint16_t, const uint16_t * ,uint32_t );
 
 #endif //mi_libreria_H

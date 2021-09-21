@@ -7,3 +7,12 @@ Debug/src/main.o
 Debug/05TP_E03.map
 Debug/05TP_E03.list
 Debug/05TP_E03.elf
+Debug/src/system_stm32f4xx.o
+Debug/src/stm32f4xx_it.su
+Debug/src/stm32f4xx_it.o
+Debug/src/main.su
+Debug/src/main.o
+Debug/05TP_E03.map
+Debug/05TP_E03.list
+Debug/05TP_E03.elf
+05TP_E03.elf.launch

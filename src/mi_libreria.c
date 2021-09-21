@@ -909,7 +909,7 @@ DAC_SINE32BIT
 	* @ej
 		- INIT_DAC_Sine(GPIOX, GPIO_Pin_X); //Inicialización del Pin PXXX como DAC.
 ******************************************************************************/
-static void DAC_SINE32BIT(GPIO_TypeDef* Port, uint16_t Pin, const uint16_t *SineWave ,uint32_t Freq)
+void DAC_SINE32BIT(GPIO_TypeDef* Port, uint16_t Pin, const uint16_t *SineWave ,uint32_t Freq)
 {
 	/*Configuración del TIM6 como base de tiempo: */
 	TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
