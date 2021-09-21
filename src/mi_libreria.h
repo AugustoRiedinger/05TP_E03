@@ -11,6 +11,7 @@
 #include "stm32f4xx_exti.h"
 #include "stm32f4xx_syscfg.h"
 #include "stm32f4xx_dac.h"
+#include "stm32f4xx_dma.h"
 
 
 //--------------------------------------------------------------
@@ -25,6 +26,9 @@
 #define	 BufferLength 	  20
 #define  MaxDigCount 	  4095
 #define  MaxMiliVoltRef	  3320
+#define  Res32Bit		  32
+#define  DAC_DHR12R2_ADDRESS   0x40007414
+
 
 TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
 TIM_OCInitTypeDef  		TIM_OCInitStructure;
@@ -112,6 +116,7 @@ void INIT_EXTINT(GPIO_TypeDef*, uint16_t);
 
 void INIT_DAC_CONT(GPIO_TypeDef* , uint16_t);
 void DAC_CONT(GPIO_TypeDef*, uint16_t, int16_t);
-
+void INIT_DAC_SINE(GPIO_TypeDef*, uint16_t);
+static void DAC_SINE32BIT(GPIO_TypeDef*, uint16_t, const uint16_t * ,uint32_t );
 
 #endif //mi_libreria_H

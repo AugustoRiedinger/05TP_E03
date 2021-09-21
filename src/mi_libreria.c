@@ -858,6 +858,134 @@ void DAC_CONT(GPIO_TypeDef* Port, uint16_t Pin, int16_t MiliVolts)
 	else
 		DAC_SetChannel2Data(DAC_Align_12b_R, Data);
 }
+
+
+
+/*****************************************************************************
+INIT_DAC_SINE
+	* @author	A. Riedinger.
+	* @brief	Inicializa una salida como DAC como una onda seno.
+	* @returns	void
+	* @param
+		- Port		Puerto del timer a inicializar. Ej: GPIOX.
+		- Pin		Pin del LED. Ej: GPIO_Pin_X
+
+	* @ej
+		- INIT_DAC_Sine(GPIOX, GPIO_Pin_X); //Inicialización del Pin PXXX como DAC.
+******************************************************************************/
+void INIT_DAC_SINE(GPIO_TypeDef* Port, uint16_t Pin)
+{
+	GPIO_InitTypeDef GPIO_InitStructure;
+
+	/* DMA1 and DAC clock enable */
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA1, ENABLE);
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_DAC, ENABLE);
+
+	/* Enable GPIO clock */
+	uint32_t Clock;
+	Clock = FIND_CLOCK(Port);
+	RCC_AHB1PeriphClockCmd(Clock, ENABLE);
+
+	/* Configura el Pin como salida Analogica */
+	GPIO_InitStructure.GPIO_Pin = Pin;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AN;
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	GPIO_Init(Port, &GPIO_InitStructure);
+}
+
+
+
+/*****************************************************************************
+DAC_SINE32BIT
+	* @author	A. Riedinger.
+	* @brief	Genera una onda seno de determinada frecuencia en una salida DAC.
+	* @returns	void
+	* @param
+		- Port		Puerto del timer a inicializar. Ej: GPIOX.
+		- Pin		Pin del LED. Ej: GPIO_Pin_X
+		- SineWave  Arreglo con los valores de la onda seno.
+		- Freq 		Frecuencia de la onda seno.
+
+	* @ej
+		- INIT_DAC_Sine(GPIOX, GPIO_Pin_X); //Inicialización del Pin PXXX como DAC.
+******************************************************************************/
+static void DAC_SINE32BIT(GPIO_TypeDef* Port, uint16_t Pin, const uint16_t *SineWave ,uint32_t Freq)
+{
+	/*Configuración del TIM6 como base de tiempo: */
+	TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
+
+	/* TIM6 Periph clock enable */
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM6, ENABLE);
+	/* Time base configuration */
+	TIM_TimeBaseStructInit(&TIM_TimeBaseStructure);
+
+	/*Configuracion de la frecuencia de operacion: */
+	/*
+	 * TIM6CLK = SystemCoreClock / 2 por definicion.
+	 *
+	 * Ej.: para 32 puntos en memoria
+	 * 1/90x10^6 = 11.11 nseg x (280+1) = 3.122 useg x 32 muestras = 99,9 useg= periodo seno
+	 * --> F[KHz]= 10.254 KHz; por lo tanto, con =280 de TIM_Period llego a 10 KHz por ej.
+	 *
+	 * Entonces, de forma generica a partir del ejemplo:
+	 * (1/TIM6CLK)*(TIM_Perio+1) = 1 / Freq
+	 * Despejando de lo anterior:
+	 * TIM_Period = (TIM6CLK / Freq) - 1 es el valor que hay que poner a partir de una
+	 * frecuencia definida.
+	 *
+	 * Reemplazando TIM6CLK por su definicion:
+	 * TIM_Period = (SystemCoreClock/(2*Freq))-1
+	*/
+	TIM_TimeBaseStructure.TIM_Period = (SystemCoreClock/(2*Freq))-1;
+	TIM_TimeBaseStructure.TIM_Prescaler = 0;
+	TIM_TimeBaseStructure.TIM_ClockDivision = 0;
+	TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
+	TIM_TimeBaseInit(TIM6, &TIM_TimeBaseStructure);
+
+	/* TIM6 TRGO selection */
+	TIM_SelectOutputTrigger(TIM6, TIM_TRGOSource_Update);
+
+	/* TIM6 enable counter */
+	TIM_Cmd(TIM6, ENABLE);
+
+	/*Configuración del DMA para la generacion independiente de la senal: */
+	DMA_InitTypeDef DMA_InitStructure;
+
+	/* DAC channel Configuration */
+	DAC_InitStructure.DAC_Trigger = DAC_Trigger_T6_TRGO;
+	DAC_InitStructure.DAC_WaveGeneration = DAC_WaveGeneration_None;
+	DAC_InitStructure.DAC_OutputBuffer = DAC_OutputBuffer_Disable;
+	DAC_Init(DAC_Channel_2, &DAC_InitStructure);
+
+	 /* DMA1_Stream6 channel7 configuration*/
+	DMA_DeInit(DMA1_Stream6);
+	DMA_InitStructure.DMA_Channel = DMA_Channel_7;
+	DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t) DAC_DHR12R2_ADDRESS;
+	DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t) &SineWave;
+	DMA_InitStructure.DMA_DIR = DMA_DIR_MemoryToPeripheral;
+	DMA_InitStructure.DMA_BufferSize = Res32Bit;
+	DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+	DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
+	DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
+	DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_HalfWord;
+	DMA_InitStructure.DMA_Mode = DMA_Mode_Circular;
+	DMA_InitStructure.DMA_Priority = DMA_Priority_High;
+	DMA_InitStructure.DMA_FIFOMode = DMA_FIFOMode_Disable;
+	DMA_InitStructure.DMA_FIFOThreshold = DMA_FIFOThreshold_HalfFull;
+	DMA_InitStructure.DMA_MemoryBurst = DMA_MemoryBurst_Single;
+	DMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
+	DMA_Init(DMA1_Stream6, &DMA_InitStructure);
+
+	/* Enable DMA1_Stream6 */
+	DMA_Cmd(DMA1_Stream6, ENABLE);
+
+	/* Enable DAC Channel */
+	DAC_Cmd(FIND_DAC_CHANNEL(Port,Pin), ENABLE);
+
+	/* Enable DMA for DAC Channel */
+	DAC_DMACmd(FIND_DAC_CHANNEL(Port,Pin), ENABLE);
+}
+
 /*------------------------------------------------------------------------------
  FUNCIONES INTERNAS:
 ------------------------------------------------------------------------------*/
